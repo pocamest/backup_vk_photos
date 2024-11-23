@@ -38,8 +38,3 @@ class YaDisk:
             print(f'Создана папка {path}')  # Потом переделать на логгер
         elif response.status_code != 409:
             print(response.json().get('message'))  # Потом переделать на логгер
-
-    def _is_exist(self, path: str) -> bool:
-        params = {'path': path}
-        response = requests.get(self.url, headers=self.headers, params=params)
-        return response.status_code == 200
