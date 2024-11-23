@@ -1,3 +1,4 @@
 venv/
 .env
 info_photos.json
+__pycache__/
