@@ -1,4 +1,5 @@
 import requests
+from typing import Any
 
 
 class VK:
@@ -8,7 +9,6 @@ class VK:
     count_photos: int
     url: str
     params: dict[str, str]
-    all_photos: dict[str, dict[str, str]]
 
     def __init__(
             self, access_token: str, user_id: str,
@@ -23,24 +23,37 @@ class VK:
             'access_token': self.access_token,
             'v': self.version,
         }
-        self.all_photos = {}
 
-    def get_photos(
+    def _choose_photos(
             self,
-            save_all_albums: bool = False,
-    ) -> dict[str, dict[str, str]]:
-        # Переделать чтобы возвращала до 5 фотографий наибольшего размера
-        self._get_photos_album('profile')
-        if save_all_albums and len(self.all_photos) < self.count_photos:
-            album_ids = self._get_album_ids()
-            for album_id in album_ids:
-                self._get_photos_album(album_id)
-                if len(self.all_photos) == self.count_photos:
-                    break
-        return self.all_photos
+            photos: list[dict[str, str | int]],
+            count=1,
+    ) -> list[dict[str, str | int]]:
+        '''Выбирает фотографии максимального разрешения'''
+        return sorted(
+            photos,
+            key=lambda x: x['height'] * x['width'],
+        )[-count:]
 
-    def _get_photos_album(self, album_id: str) -> None:
-        # Разделить на несколько методов
+    def _processing_photo(self, item: dict[str, Any]):
+        '''
+        Формирует словарь с ключами:
+            'likes', 'date', 'height', 'type', 'width', 'type'
+        '''
+        return {
+            'likes': str(item['likes']['count']),
+            'date': item['date'],
+            **self._choose_photos(item['sizes'])[0],
+        }
+
+    def _combine_photos(self, responses: list[list[dict]]) -> list[dict]:
+        '''Объединяет сформированные словари фотографий в один список'''
+        return [self._processing_photo(item)
+                for items in responses
+                for item in items]
+
+    def _get_items(self, album_id: str) -> list[dict]:
+        '''Возвращает фографии из альбома'''
         url = f'{self.url}/photos.get'
         params = {
             'owner_id': self.user_id,
@@ -48,25 +61,42 @@ class VK:
             'extended': '1',
         }
         response = requests.get(url, params={**self.params, **params})
-        for item in response.json()['response']['items']:
-            if len(self.all_photos) == self.count_photos:
-                break
-            photo = sorted(
-                item['sizes'],
-                key=lambda x: x['height'] + x['width'])[-1]
-            dict_photo = {
-                    'url': photo['url'],
-                    'size': photo['type'],
-                }
-            likes = str(item['likes']['count'])
-            if likes in self.all_photos:
-                photo_name = f'{likes}_{item["date"]}'
-                self.all_photos[photo_name] = dict_photo
+        return response.json()['response']['items']
+
+    def _formate_photos(self, photos: list) -> list[dict[str, dict[str, str]]]:
+        '''Форматирует для фотографий уникальные имена'''
+        result = {}
+        for photo in photos:
+            if photo['likes'] in result:
+                photo_name = f'{photo["likes"]}_{photo["date"]}'
             else:
-                self.all_photos[likes] = dict_photo
+                photo_name = photo['likes']
+            result[photo_name] = {
+                'url': photo['url'],
+                'size': photo['type'],
+            }
+        return result
 
     def _get_album_ids(self) -> list[str]:
+        """Возвращает id всех альбомов пользователя"""
         url = f'{self.url}/photos.getAlbums'
         params = {'owner_id': self.user_id}
         response = requests.get(url, params={**self.params, **params})
         return [item['id']for item in response.json()['response']['items']]
+
+    def get_photos(
+            self,
+            save_all_albums=False,
+    ) -> list[dict[str, dict[str, str]]]:
+        '''Возвращает  фотографии в виде словаря:
+            ключи: уникальные имена фотографий
+            значения: словари с служебной информацией'''
+        albums = ['profile']
+        if save_all_albums:
+            albums.extend(self._get_album_ids())
+        responses = [self._get_items(album) for album in albums]
+        raw_photos = self._choose_photos(
+            self._combine_photos(responses),
+            count=self.count_photos,
+        )
+        return self._formate_photos(raw_photos)
