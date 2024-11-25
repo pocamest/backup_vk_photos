@@ -52,18 +52,7 @@ class VK:
                 for items in responses
                 for item in items]
 
-    def _get_items(self, album_id: str) -> list[dict]:
-        '''Возвращает фографии из альбома'''
-        url = f'{self.url}/photos.get'
-        params = {
-            'owner_id': self.user_id,
-            'album_id': album_id,
-            'extended': '1',
-        }
-        response = requests.get(url, params={**self.params, **params})
-        return response.json()['response']['items']
-
-    def _formate_photos(self, photos: list) -> list[dict[str, dict[str, str]]]:
+    def _format_photos(self, photos: list) -> list[dict[str, dict[str, str]]]:
         '''Форматирует для фотографий уникальные имена'''
         result = {}
         for photo in photos:
@@ -76,6 +65,26 @@ class VK:
                 'size': photo['type'],
             }
         return result
+
+    def _make_request(
+            self,
+            url: str,
+            params: dict[str, str],
+    ) -> dict[str, Any]:
+        # Надо добавить обработку ошибок и логгер
+        response = requests.get(url, params)
+        return response.json()
+
+    def _get_items(self, album_id: str) -> list[dict]:
+        '''Возвращает фографии из альбома'''
+        url = f'{self.url}/photos.get'
+        params = {
+            'owner_id': self.user_id,
+            'album_id': album_id,
+            'extended': '1',
+        }
+        data = self._make_request(url, params={**self.params, **params})
+        return data.get('response', {}).get('items', [])
 
     def _get_album_ids(self) -> list[str]:
         """Возвращает id всех альбомов пользователя"""
@@ -99,4 +108,4 @@ class VK:
             self._combine_photos(responses),
             count=self.count_photos,
         )
-        return self._formate_photos(raw_photos)
+        return self._format_photos(raw_photos)
