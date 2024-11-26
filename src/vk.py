@@ -75,7 +75,7 @@ class VK:
         response = requests.get(url, params)
         return response.json()
 
-    def _get_items(self, album_id: str) -> list[dict]:
+    def _get_items(self, album_id: str) -> list[dict[str, Any]]:
         '''Возвращает фографии из альбома'''
         url = f'{self.url}/photos.get'
         params = {
