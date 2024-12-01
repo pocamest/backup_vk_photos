@@ -1,5 +1,6 @@
 import requests
 from typing import Any
+import logging
 
 
 class VK:
@@ -23,6 +24,7 @@ class VK:
             'access_token': self.access_token,
             'v': self.version,
         }
+        self.logger = logging.getLogger(__name__)
 
     def _choose_photos(
             self,
@@ -53,7 +55,7 @@ class VK:
                 for item in items]
 
     def _format_photos(self, photos: list) -> list[dict[str, dict[str, str]]]:
-        '''Форматирует для фотографий уникальные имена'''
+        '''Форматирует фотографии, присваивая им уникальные имена'''
         result = {}
         for photo in photos:
             if photo['likes'] in result:
@@ -71,9 +73,14 @@ class VK:
             url: str,
             params: dict[str, str],
     ) -> dict[str, Any]:
-        # Надо добавить обработку ошибок и логгер
-        response = requests.get(url, params)
-        return response.json()
+        try:
+            self.logger.info(f'Запрос к {url}')
+            response = requests.get(url, params).json()
+            if 'error' in response:
+                self.logger.error(response['error']['error_msg'])
+            return response
+        except Exception:
+            self.logger.exception(f'Ошибка при запросе к {url}')
 
     def _get_items(self, album_id: str) -> list[dict[str, Any]]:
         '''Возвращает фографии из альбома'''
@@ -84,14 +91,23 @@ class VK:
             'extended': '1',
         }
         data = self._make_request(url, params={**self.params, **params})
-        return data.get('response', {}).get('items', [])
+        items = data.get('response', {}).get('items', [])
+        if not items:
+            self.logger.error(
+                f'Ошибка при извлечении фотографий из альбома {album_id}'
+            )
+        return items
 
     def _get_album_ids(self) -> list[str]:
         """Возвращает id всех альбомов пользователя"""
         url = f'{self.url}/photos.getAlbums'
         params = {'owner_id': self.user_id}
-        response = requests.get(url, params={**self.params, **params})
-        return [item['id']for item in response.json()['response']['items']]
+        response = self._make_request(url, params={**self.params, **params})
+        try:
+            album_ids = [item['id']for item in response['response']['items']]
+            return album_ids
+        except KeyError:
+            self.logger.exception('Ошибка при получении списка альбомов')
 
     def get_photos(
             self,
