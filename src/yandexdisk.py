@@ -1,5 +1,6 @@
 import requests
 import json
+import logging
 
 
 class YaDisk:
@@ -9,6 +10,7 @@ class YaDisk:
         self.headers = {
             'Authorization': ya_token,
         }
+        self.logger = logging.getLogger(__name__)
 
     def upload_photo(
             self,
@@ -23,18 +25,45 @@ class YaDisk:
                 'path': f'{path}/{key}',
                 'url': value['url']
             }
-            requests.post(url, headers=self.headers, params=params)
-            info_photos.append({'file_name': key, 'size': value['size']})
+            try:
+                res = requests.post(
+                    url,
+                    headers=self.headers,
+                    params=params,
+                ).json()
+                info_photos.append({'file_name': key, 'size': value['size']})
+            except Exception:
+                self.logger.exception(
+                    f'Ошибка при загрузге фотографии {params["path"]}'
+                )
+            if 'message' in res:
+                self.logger.error(res['message'])
+            else:
+                self.logger.info(f'Загружена фотография {params["path"]}')
         self._write_json(info_photos)
 
     def _write_json(self, info_photos: list[dict[str, str]]) -> None:
-        with open('info_photos.json', 'w') as f:
-            json.dump(info_photos, f)
+        try:
+            with open('info_photos.json', 'w') as f:
+                json.dump(info_photos, f)
+        except Exception:
+            self.logger.exception('Ошибка при записи в json')
 
     def _create_folder(self, path: str) -> None:
         params = {'path': path}
-        response = requests.put(self.url, headers=self.headers, params=params)
-        if response.status_code == 201:
-            print(f'Создана папка {path}')  # Потом переделать на логгер
-        elif response.status_code != 409:
-            print(response.json().get('message'))  # Потом переделать на логгер
+        try:
+            res = requests.put(
+                self.url,
+                headers=self.headers,
+                params=params
+            )
+        except Exception:
+            self.logger.exception(
+                f'Ошибка при создании директории {params["path"]}'
+            )
+        if res.status_code == 201:
+            self.logger.info(f'Создана директория {params["path"]}')
+        elif res.status_code == 409:
+            self.logger.debug(res.json().get('message'))
+        else:
+            self.logger.error(res.json()['message'])
