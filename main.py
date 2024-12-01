@@ -25,7 +25,7 @@ def main():
 
     vk = VK(vk_token, user_id)
     logger.info('Получение фотографий с ВК...')
-    photos = vk.get_photos(save_all_albums=True)
+    photos = vk.get_photos(save_all_albums=False)
     logger.info(f'Получено {len(photos)} фотографий')
 
     yadisk = YaDisk(ya_token)
