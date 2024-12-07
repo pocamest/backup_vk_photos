@@ -4,25 +4,23 @@ import logging
 
 
 class VK:
+    VERSION: str = '5.199'
+    URL: str = 'https://api.vk.com/method'
     access_token: str
     user_id: str
-    version: str
     count_photos: int
-    url: str
     params: dict[str, str]
 
     def __init__(
-            self, access_token: str, user_id: str,
-            version: str = '5.199', count_photos: int = 5
+            self, access_token: str,
+            user_id: str, count_photos: int = 5
     ) -> None:
         self.access_token = access_token
         self.user_id = user_id
-        self.version = version
         self.count_photos = count_photos
-        self.url = 'https://api.vk.com/method'
         self.params = {
             'access_token': self.access_token,
-            'v': self.version,
+            'v': self.VERSION,
         }
         self.logger = logging.getLogger(__name__)
 
@@ -87,7 +85,7 @@ class VK:
 
     def _get_items(self, album_id: str) -> list[dict[str, Any]]:
         '''Возвращает фографии из альбома'''
-        url = f'{self.url}/photos.get'
+        url = f'{self.URL}/photos.get'
         params = {
             'owner_id': self.user_id,
             'album_id': album_id,
@@ -103,7 +101,7 @@ class VK:
 
     def _get_album_ids(self) -> list[str]:
         """Возвращает id всех альбомов пользователя"""
-        url = f'{self.url}/photos.getAlbums'
+        url = f'{self.URL}/photos.getAlbums'
         params = {'owner_id': self.user_id}
         response = self._make_request(url, params={**self.params, **params})
         try:
