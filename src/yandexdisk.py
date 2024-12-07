@@ -49,7 +49,7 @@ class YaDisk:
         '''Запись в json файл информации о заруженных фотографиях'''
         try:
             with open('info_photos.json', 'w') as f:
-                json.dump(info_photos, f)
+                json.dump(info_photos, f, indent=4)
         except Exception:
             self.logger.exception('Ошибка при записи в json')
 
