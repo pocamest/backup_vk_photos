@@ -4,9 +4,11 @@ import logging
 
 
 class YaDisk:
+    ya_token: str
+    URL: str = 'https://cloud-api.yandex.net/v1/disk/resources/'
+
     def __init__(self, ya_token: str) -> None:
         self.ya_token = ya_token
-        self.url = 'https://cloud-api.yandex.net/v1/disk/resources/'
         self.headers = {
             'Authorization': ya_token,
         }
@@ -17,7 +19,8 @@ class YaDisk:
             path: str,
             photos: dict[str, dict[str, str]],
     ) -> None:
-        url = f'{self.url}upload'
+        '''Загрузка фотографий на Я.Диск'''
+        url = f'{self.URL}upload'
         info_photos = []
         for key, value in photos.items():
             self._create_folder(path)
@@ -43,6 +46,7 @@ class YaDisk:
         self._write_json(info_photos)
 
     def _write_json(self, info_photos: list[dict[str, str]]) -> None:
+        '''Запись в json файл информации о заруженных фотографиях'''
         try:
             with open('info_photos.json', 'w') as f:
                 json.dump(info_photos, f)
@@ -50,10 +54,11 @@ class YaDisk:
             self.logger.exception('Ошибка при записи в json')
 
     def _create_folder(self, path: str) -> None:
+        '''Создание директории в Я.Диске'''
         params = {'path': path}
         try:
             res = requests.put(
-                self.url,
+                self.URL,
                 headers=self.headers,
                 params=params
             )
