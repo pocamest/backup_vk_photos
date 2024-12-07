@@ -73,14 +73,18 @@ class VK:
             url: str,
             params: dict[str, str],
     ) -> dict[str, Any]:
+        ''' Делает запрос к API'''
+        response = {}
         try:
             self.logger.info(f'Запрос к {url}')
             response = requests.get(url, params).json()
             if 'error' in response:
                 self.logger.error(response['error']['error_msg'])
-            return response
+            # return response
         except Exception:
             self.logger.exception(f'Ошибка при запросе к {url}')
+        finally:
+            return response
 
     def _get_items(self, album_id: str) -> list[dict[str, Any]]:
         '''Возвращает фографии из альбома'''
