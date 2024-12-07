@@ -80,7 +80,6 @@ class VK:
             response = requests.get(url, params).json()
             if 'error' in response:
                 self.logger.error(response['error']['error_msg'])
-            # return response
         except Exception:
             self.logger.exception(f'Ошибка при запросе к {url}')
         finally:
@@ -109,9 +108,11 @@ class VK:
         response = self._make_request(url, params={**self.params, **params})
         try:
             album_ids = [item['id']for item in response['response']['items']]
-            return album_ids
         except KeyError:
             self.logger.exception('Ошибка при получении списка альбомов')
+            album_ids = []
+        finally:
+            return album_ids
 
     def get_photos(
             self,
