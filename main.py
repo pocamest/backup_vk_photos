@@ -1,6 +1,6 @@
 from src.vk import VK
 from src.yandexdisk import YaDisk
-from environs import Env
+from environs import Env, EnvError
 import logging
 
 
@@ -13,15 +13,45 @@ logging.basicConfig(
     )
 
 
+def validate(value_type: str, value: str) -> None:
+    data = {
+        'vk_token': 'Некорректный ключ доступа VK API',
+        'ya_token': 'Некорректный OAuth-токен Яндекс.Диска',
+        'user_id': 'Некорректный id vk-пользователя'
+    }
+    if not value:
+        raise ValueError(data.get(value_type, f'Неккоректный {value_type}'))
+
+
 def main():
     logger.info('Начало работы')
 
     env = Env()
     env.read_env()
-    vk_token = env('VK_TOKEN')
 
-    user_id = input('Введите id vk-пользователя ')
-    ya_token = input('Введите OAuth-токен Яндекс.Диска ')
+    try:
+        vk_token = env('VK_TOKEN').strip()
+        validate('vk_token', vk_token)
+    except EnvError as e:
+        logger.error(e)
+        return
+    except ValueError as e:
+        logger.error(e)
+        return
+
+    user_id = input('Введите id vk-пользователя ').strip()
+    try:
+        validate('user_id', user_id)
+    except ValueError as e:
+        logger.error(e)
+        return
+
+    ya_token = input('Введите OAuth-токен Яндекс.Диска ').strip()
+    try:
+        validate('ya_token', ya_token)
+    except ValueError as e:
+        logger.error(e)
+        return
 
     vk = VK(vk_token, user_id)
     logger.info('Получение фотографий с ВК...')
